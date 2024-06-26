@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper</title>
+    <style>
+        :root {
+            --primary-color: #4a4a4a;
+            --background-color: #ffffff;
+            --text-color: #000000;
+            --header-color: #dce3e9c2;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            text-align: center;
+        }
+        header {
+            background-color: var(--header-color);
+            color: var(--primary-color);
+            text-align: center;
+            padding: 1rem;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+        td {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ccc;
+            text-align: center;
+            vertical-align: middle;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+        .hidden {
+            background-color: #ddd;
+        }
+        .mine {
+            background-color: red;
+        }
+        .flag {
+            background-color: yellow;
+        }
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .btn:hover {
+            background-color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Minesweeper</h1>
+    </header>
+    <a href="index.html" class="btn">Back to Home</a>
+    <div id="game-container"></div>
+    <button class="btn" onclick="location.reload()">Restart Game</button>
+    <p>Left-click to reveal a space, right-click to flag/unflag</p>
+    <script>
+   const rows = 10;
+        const cols = 10;
+        const mines = 10;
+        let board = [];
+        let gameOver = false;
+
+        function createBoard() {
+            for (let i = 0; i < rows; i++) {
+                board[i] = [];
+                for (let j = 0; j < cols; j++) {
+                    board[i][j] = {
+                        isMine: false,
+                        neighbors: 0,
+                        revealed: false,
+                        flagged: false
+                    };
+                }
+            }
+
+            // Place mines
+            let minesPlaced = 0;
+            while (minesPlaced < mines) {
+                const row = Math.floor(Math.random() * rows);
+                const col = Math.floor(Math.random() * cols);
+                if (!board[row][col].isMine) {
+                    board[row][col].isMine = true;
+                    minesPlaced++;
+                }
+            }
+
+            // Calculate neighbors
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (!board[i][j].isMine) {
+                        board[i][j].neighbors = countNeighbors(i, j);
+                    }
+                }
+            }
+        }
+
+        function countNeighbors(row, col) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                        if (board[newRow][newCol].isMine) {
+                            count++;
+                        }
+                    }
+                }
+            }
+            return count;
+        }
+
+        function revealCell(row, col) {
+            if (row < 0 || row >= rows || col < 0 || col >= cols || board[row][col].revealed || board[row][col].flagged || gameOver) {
+                return;
+            }
+
+            board[row][col].revealed = true;
+            const cell = document.getElementById(`cell-${row}-${col}`);
+            cell.classList.remove('hidden');
+
+            if (board[row][col].isMine) {
+                cell.classList.add('mine');
+                cell.textContent = '💣';
+                gameOver = true;
+                alert('Game Over!');
+            } else if (board[row][col].neighbors === 0) {
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        revealCell(row + i, col + j);
+                    }
+                }
+            } else {
+                cell.textContent = board[row][col].neighbors;
+            }
+
+            checkWin();
+        }
+
+        function flagCell(row, col) {
+            if (row < 0 || row >= rows || col < 0 || col >= cols || board[row][col].revealed || gameOver) {
+                return;
+            }
+
+            const cell = document.getElementById(`cell-${row}-${col}`);
+            board[row][col].flagged = !board[row][col].flagged;
+
+            if (board[row][col].flagged) {
+                cell.classList.add('flag');
+                cell.textContent = '🚩';
+            } else {
+                cell.classList.remove('flag');
+                cell.textContent = '';
+            }
+        }
+
+        function checkWin() {
+            let unrevealedSafeCells = 0;
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (!board[i][j].isMine && !board[i][j].revealed) {
+                        unrevealedSafeCells++;
+                    }
+                }
+            }
+            if (unrevealedSafeCells === 0) {
+                gameOver = true;
+                alert('Congratulations! You won!');
+            }
+        }
+
+        function renderBoard() {
+            const gameContainer = document.getElementById('game-container');
+            const table = document.createElement('table');
+
+            for (let i = 0; i < rows; i++) {
+                const row = document.createElement('tr');
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('td');
+                    cell.id = `cell-${i}-${j}`;
+                    cell.classList.add('hidden');
+                    cell.addEventListener('click', () => revealCell(i, j));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        flagCell(i, j);
+                    });
+                    row.appendChild(cell);
+                }
+                table.appendChild(row);
+            }
+
+            gameContainer.appendChild(table);
+        }
+
+        createBoard();
+        renderBoard();
+    </script>
+</body>
+</html>
